@@ -19,16 +19,22 @@ class BasicBlock(nn.Module):
 
 
 class ConvNetwork(nn.Module):
-    """Baseline CNN: two stride-2 conv blocks, global average pool, linear head."""
+    """Baseline CNN: stride-2 conv blocks, global average pool, linear head.
 
-    def __init__(self, dim=64, in_channels=1, num_classes=2, dropout_p=0.3):
+    channels=(64, 128) is the original 2-block model; the default has 4 blocks.
+    """
+
+    def __init__(self, channels=(64, 128, 256, 256), in_channels=1, num_classes=2, dropout_p=0.1):
         super().__init__()
-        self.block1 = BasicBlock(in_channels, dim, 3, stride=2, dropout_p=dropout_p)
-        self.block2 = BasicBlock(dim, dim * 2, 3, stride=2, dropout_p=dropout_p)
+        dims = [in_channels, *channels]
+        self.blocks = nn.Sequential(*[
+            BasicBlock(dims[i], dims[i + 1], 3, stride=2, dropout_p=dropout_p)
+            for i in range(len(channels))
+        ])
         self.ave_pool = nn.AdaptiveAvgPool2d(1)
-        self.classifier = nn.Linear(dim * 2, num_classes)
+        self.classifier = nn.Linear(channels[-1], num_classes)
 
     def forward(self, x):
-        x = self.block2(self.block1(x))
+        x = self.blocks(x)
         out = self.ave_pool(x).view(x.size(0), -1)
         return self.classifier(out)   # raw logits, no softmax
