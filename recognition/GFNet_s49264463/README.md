@@ -18,3 +18,34 @@ Preliminary Feasibility Evidence:An audit of the preprocessed ADNI data found 21
 
 ### 4 - Risks, Budget & Fallback
 The main technical risks are patient-level data leakage, overfitting, and overconfidence. Slices from the same patient could end up in both training and test sets and inflate accuracy, so I will split by patient ID and check that no patient appears in more than one set. Transformer style models like GFnet can overfit on these smaller medical datasets so I will tackle this through data augmentation on training sets only. The GFnet may also be over confident on ambiguous scans which is the dilemma this project investigates, so I will measure accuracy within confidence bands and compare against the baseline CNN.If GFNet cannot reach 0.80 test accuracy or does not fit the resource limits, the fallback is a smaller configuration (fewer blocks or a smaller embedding dimension) with stronger regularisation. If it still falls short, I will report the result honestly and compare it with the baseline CNN, which is the simpler option.The next step is training the baseline CNN on the patient-level split
+
+
+##  Data and Preprocessing:
+### 1 - Data Audit 
+The data originally started with the training set containing 1,076 patients with 21,520 slices totally , and the test set contained 450 patients with 9,002 slices totally, which is around 20 slices per patient with one patient having 22 slices.The provided data split was 85/15 with no leakage from patients in the training set to the test set. The image ( a slice ) is a greyscale image , containing one channel and the images are 256×240.
+
+### 2 - Data split :
+The data is split by patient not by slice , as slices are too identical If slice 78 is in train and slice 79 is in validation, the model is “tested” on a brain it has already seen, and the score is inflated. The validation set was created form the training set where Within each class (AD / NC) , The patient IDs are sorted, shuffled with seed 42, and the first 15% are taken:
+AD: 15% of 520 = 78 patients to validation
+NC: 15% of 556 = about 83 patients to validation
+Every slice of a chosen patient goes with them (20 each).
+
+### 3 -  Preprocessing and augmentation:
+The data was preprocessed by   
+1. Resizing :  256×240 becomes 224×224 , The model needs one fixed size. It slightly squashes the aspect ratio, which is applied equally to every set.
+2. ToTensor:
+Pixel values 0-255 become 0.0-1.0, shape (1, 224, 224), PyTorch needs tensors. The 1 is the single greyscale channel as mentioned in the data audit.
+3. Normalise :  (mean 0.5, std 0.5)	Values become -1 to 1. A pixel of 0.8 becomes (0.8 - 0.5) / 0.5 = 0.6
+Centred inputs make training faster and steadier.
+
+Augmentation:
+The training slices were randomly rotated (±10°), shifted (±5%), zoomed (0.95-1.05) and given small brightness and contrast changes to mimic variation in head position and scanner settings, while validation and test slices were only resized and normalised so their scores stay repeatable.
+
+
+
+
+## Models:
+
+### BASELINE CNN:
+
+
