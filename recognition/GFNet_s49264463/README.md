@@ -47,5 +47,28 @@ The training slices were randomly rotated (±10°), shifted (±5%), zoomed (0.95
 ## Models:
 
 ### BASELINE CNN:
+### INTRODUCTION:
+The baseline CNN was adapted from the course MNIST practical ,  the initial two block architecture was too simple and the test accuracy was around 63% , so I upgraded it to a 4 block architecture which ended up achieving a 73% test accuracy which is a better baseline comparison.This shares a similar structure to the GFnets architecture which are repeated blocks followed by a global average pooling  and a final linear MLP layer.The small local filters in the CNN versus a global filter in the GFnet ,This lets me test whether whether GFnets extra complexity is actually justified for classifying AD against NC.
+
+###The 4 block CNN architecture:
+
+An input of 1×224×224 greyscale slice.
+4 conv blocks, each Conv2d (3×3, stride 2) → BatchNorm → ReLU → Dropout (0.1).
+Channels grow 64 → 128 → 256 → 256, and the size shrinks 224 → 111 → 55 → 27 → 13.
+Global average pooling turns the 256 feature maps into 256 numbers.
+A linear layer gives 2 logits (NC, AD). Softmax is applied later to get the confidence score.
+961,666 parameters.
+
+### How it was trained:
+
+The baseline CNN was trained for 30 epochs on  google colab Pro, on a T4 gpu . Cross entropy loss was used and the Adam optimiser (with a learning rate of 1e-3) with a batch size of 32. Validation accuracy was checked after every epoch and the best checkpoint was kept, while the test set was used only once at the end.
+
+### Why this design choice:
+
+The baseline uses four stride-2 convolution blocks (each with BatchNorm, ReLU and light dropout) to shrink the slice from 224×224 to 13×13, followed by global average pooling and a single linear layer, which keeps the model small (961,666 parameters) and less prone to overfitting. It follows the course MNIST CNN so it stays simple, and it was extended from 2 to 4 blocks after the shallower version underfitted
+
+### The results:
+The Final 4-block baseline CNN reached a test accuracy of 73 % with a test loss of 62 %  , with the best validation accuracy is 0.860, at epoch 26. The model trained for 30 epochs which took 22.8 minutes on a Colab T4 GPU with a peak GPU memory use of 0l.59 GB. The relatively high test loss for this accuracy suggests the model’s predictions are not very confident, which is examined in the confidence analysis below.
+ 
 
 
