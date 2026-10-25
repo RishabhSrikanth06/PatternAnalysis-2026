@@ -12,7 +12,7 @@ from dataset import get_dataloaders
 from modules import ConvNetwork
 
 # Hyper-parameters
-num_epochs = 15
+num_epochs = 30
 learning_rate = 1e-3
 out_dir = "/content/drive/MyDrive/gfnet_runs"   # checkpoints/plots go to Drive, not git
 
