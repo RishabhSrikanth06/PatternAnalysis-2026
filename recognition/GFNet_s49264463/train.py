@@ -9,11 +9,13 @@ import torch
 import torch.nn as nn
 
 from dataset import get_dataloaders
-from modules import ConvNetwork
+from modules import ConvNetwork, GFNet
+from utils import collect_probs
 
 # Hyper-parameters
 num_epochs = 30
-learning_rate = 1e-3
+model_name = "gfnet"   # "cnn" or "gfnet"
+learning_rate = 3e-4 if model_name == "gfnet" else 1e-3
 out_dir = "/content/drive/MyDrive/gfnet_runs"   # checkpoints/plots go to Drive, not git
 
 
@@ -37,13 +39,13 @@ def main():
     print("Device:", device)
 
     train_loader, val_loader, test_loader = get_dataloaders("/content/AD_NC")
-    model = ConvNetwork().to(device)
+    model = (GFNet() if model_name == "gfnet" else ConvNetwork()).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     total_step = len(train_loader)
 
     history = {"train_loss": [], "val_loss": [], "val_acc": []}
-    best_val_acc, ckpt = 0.0, os.path.join(out_dir, "best_cnn.pt")
+    best_val_acc, ckpt = 0.0, os.path.join(out_dir, f"best_{model_name}.pt")
 
     print("> Training")
     start = time.time()
@@ -91,13 +93,15 @@ def main():
     ax[0].set_title("Loss"); ax[0].set_xlabel("epoch"); ax[0].legend()
     ax[1].plot(history["val_acc"], label="val")
     ax[1].set_title("Validation accuracy"); ax[1].set_xlabel("epoch")
-    fig.savefig(os.path.join(out_dir, "cnn_curves.png"), dpi=150, bbox_inches="tight")
+    fig.savefig(os.path.join(out_dir, f"{model_name}_curves.png"), dpi=150, bbox_inches="tight")
 
     # Test once, with the best validation checkpoint
     print("> Testing")
     model.load_state_dict(torch.load(ckpt, map_location=device))
     test_loss, test_acc = evaluate(model, test_loader, criterion, device)
     print(f"Test loss {test_loss:.4f} | Test accuracy {test_acc:.3f} (per slice)")
+    probs, labels = collect_probs(model, test_loader, device)
+    torch.save({"probs": probs, "labels": labels}, os.path.join(out_dir, f"{model_name}_test_probs.pt"))
 
 
 if __name__ == "__main__":
