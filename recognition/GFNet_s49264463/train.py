@@ -13,7 +13,7 @@ from modules import ConvNetwork, GFNet
 from utils import collect_probs
 
 # Hyper-parameters
-num_epochs = 30
+num_epochs = 40
 model_name = "gfnet"   # "cnn" or "gfnet"
 learning_rate = 3e-4 if model_name == "gfnet" else 1e-3
 out_dir = "/content/drive/MyDrive/gfnet_runs"   # checkpoints/plots go to Drive, not git
@@ -39,9 +39,10 @@ def main():
     print("Device:", device)
 
     train_loader, val_loader, test_loader = get_dataloaders("/content/AD_NC")
-    model = (GFNet() if model_name == "gfnet" else ConvNetwork()).to(device)
+    model = (GFNet(drop_rate=0.1, drop_path_rate=0.3) if model_name == "gfnet" else ConvNetwork()).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.05 if model_name == "gfnet" else 0.0)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     total_step = len(train_loader)
 
     history = {"train_loss": [], "val_loss": [], "val_acc": []}
@@ -71,6 +72,7 @@ def main():
                       .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
 
         # Validate once per epoch and keep the best checkpoint
+        scheduler.step()
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         history["train_loss"].append(running_loss / total_step)
         history["val_loss"].append(val_loss)
