@@ -26,18 +26,29 @@ def group_by_patient(root, split):
     return dict(patients)
 
 
-def split_train_val(patients, val_frac=0.15, seed=42):
-    """Split patients (not slices) into train and validation sets."""
+def split_train_val(patients, val_frac=0.15, seed=42, gap=50):
+    """Split by groups of nearby patient IDs (likely repeat scans of one person)."""
+    ids = sorted(patients, key=int)
+    groups, cur = [], [ids[0]]
+    for x, y in zip(ids, ids[1:]):
+        if int(y) - int(x) <= gap:
+            cur.append(y)
+        else:
+            groups.append(cur)
+            cur = [y]
+    groups.append(cur)
+
     rng = random.Random(seed)
+    rng.shuffle(groups)
+    n_val = round(val_frac * len(ids))
     val_ids = set()
-    for label in (0, 1):   # split AD and NC separately to keep the class ratio
-        ids = sorted(pid for pid, items in patients.items() if items[0][1] == label)
-        rng.shuffle(ids)
-        val_ids.update(ids[: round(val_frac * len(ids))])
+    for g in groups:
+        if len(val_ids) >= n_val:
+            break
+        val_ids.update(g)
 
     train_ids = set(patients) - val_ids
     assert train_ids.isdisjoint(val_ids), "Patient appears in both train and val!"
-
     train_items = [it for pid in sorted(train_ids) for it in patients[pid]]
     val_items = [it for pid in sorted(val_ids) for it in patients[pid]]
     return train_items, val_items
