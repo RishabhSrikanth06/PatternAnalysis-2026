@@ -39,7 +39,7 @@ def main():
     print("Device:", device)
 
     train_loader, val_loader, test_loader = get_dataloaders("/content/AD_NC")
-    model = (GFNet(drop_rate=0.1, drop_path_rate=0.3) if model_name == "gfnet" else ConvNetwork()).to(device)
+    model = (GFNet(drop=0.1, drop_path_rate=0.3) if model_name == "gfnet" else ConvNetwork()).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.05 if model_name == "gfnet" else 0.0)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
