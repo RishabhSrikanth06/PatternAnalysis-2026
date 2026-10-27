@@ -1,4 +1,13 @@
 # GFNet for AD vs CN Classification (ADNI)
+## Problem Overview
+### The problem is to classify the ADNI data set which contains images of patients brain slices  into AD or NC (Alzheimer's Disease or Normal Cognitive) , this classifier uses a GFnet (Global Filter Network)  with the goal of achieving a test accuracy of >0.8 with a baseline CNN to compare the results with.
+
+## The Workings Of A GFnet As A AD/NC Classifier:
+A global Filter Network works like a vision transformer-style classifier , that uses a simple frequency-domain filter instead of self-attention to share information across the whole image.It flows like this -> it takes each slice in its spatial form, cuts it into 16×16 patches, and turns each patch into a short list of 192 numbers (a token), giving a 14×14 grid of tokens. Inside each block, the grid for every feature is converted from the spatial domain to its frequency domain using a 2D FFT transform, where each value now describes how much of a particular wave pattern, from broad shapes to fine detail, the slice contains. These frequency values are multiplied by a learned filter that decides which patterns to keep, shrink or boost, and an inverse Fourier transform converts the result back into the spatial domain. Because every frequency covers the whole slice, each patch now carries information from every other patch after a single layer. A small per-patch network then recombines the features, and this block is repeated six times. Finally, the tokens are averaged into one vector and a linear layer outputs two scores (NC and AD), which a softmax turns into the confidence score.  
+<img width="2055" height="1083" alt="gfnet_architecture" src="https://github.com/user-attachments/assets/2e782f6e-cc3c-4255-8d9b-a2329d56b71f" />
+
+
+*Figure 1: GFNet as implemented. Left: the overall network. Right: one block. Own diagram, following Rao et al. (2023).*
 
 ## Feasibility Review
 
