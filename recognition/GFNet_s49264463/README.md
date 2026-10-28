@@ -29,9 +29,21 @@ Preliminary Feasibility Evidence:An audit of the preprocessed ADNI data found 21
 The main technical risks are patient-level data leakage, overfitting, and overconfidence. Slices from the same patient could end up in both training and test sets and inflate accuracy, so I will split by patient ID and check that no patient appears in more than one set. Transformer style models like GFnet can overfit on these smaller medical datasets so I will tackle this through data augmentation on training sets only. The GFnet may also be over confident on ambiguous scans which is the dilemma this project investigates, so I will measure accuracy within confidence bands and compare against the baseline CNN.If GFNet cannot reach 0.80 test accuracy or does not fit the resource limits, the fallback is a smaller configuration (fewer blocks or a smaller embedding dimension) with stronger regularisation. If it still falls short, I will report the result honestly and compare it with the baseline CNN, which is the simpler option.The next step is training the baseline CNN on the patient-level split
 
 
-##  Data and Preprocessing:
-### 1 - Data Audit 
-The data originally started with the training set containing 1,076 patients with 21,520 slices totally , and the test set contained 450 patients with 9,002 slices totally, which is around 20 slices per patient with one patient having 22 slices.The provided data split was 85/15 with no leakage from patients in the training set to the test set. The image ( a slice ) is a greyscale image , containing one channel and the images are 256×240.
+##  Data - Information And Preprocessing :
+### 1 - Data Audit: 
+
+The data originally started with the training set containing 1,076 patients with 21,520 slices totally , and the test set contained 450 patients with 9,002 slices totally, which is around 20 slices per patient with one patient having 22 slices.The provided data split was 85/15 with no leakage from patients in the training set to the test set. 
+
+The image ( a slice ) is a greyscale image , containing one channel and the images are 256×240. 
+Here is a example of a AD and NC greyscale image slice :
+
+<img width="256" height="240" alt="218391_78" src="https://github.com/user-attachments/assets/33165666-1b88-4f99-8911-feb5989500b3" />
+*IMAGE OF AD BRAIN SLICE*
+
+<img width="256" height="240" alt="808819_88" src="https://github.com/user-attachments/assets/2dc61e74-e774-46a4-835c-c55e18bab589" />
+
+*IMAGE OF NC BRAIN SLICE*
+
 
 ### 2 - Data split :
 The data is split by patient not by slice , as slices are too identical If slice 78 is in train and slice 79 is in validation, the model is “tested” on a brain it has already seen, and the score is inflated. The validation set was created form the training set where Within each class (AD / NC) , The patient IDs are sorted, shuffled with seed 42, and the first 15% are taken:
