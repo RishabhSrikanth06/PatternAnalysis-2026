@@ -1,6 +1,7 @@
 # GFNet for AD vs CN Classification (ADNI)
 ## Problem Overview
-### The problem is to classify the ADNI data set which contains images of patients brain slices  into AD or NC (Alzheimer's Disease or Normal Cognitive) , this classifier uses a GFnet (Global Filter Network)  with the goal of achieving a test accuracy of >0.8 with a baseline CNN to compare the results with.
+
+The problem is to classify the ADNI data set which contains images of patients brain slices  into AD or NC (Alzheimer's Disease or Normal Cognitive) , this classifier uses a GFnet (Global Filter Network)  with the goal of achieving a test accuracy of >0.8 with a baseline CNN to compare the results with.
 
 ## The Workings Of A GFnet As A AD/NC Classifier:
 A global Filter Network works like a vision transformer-style classifier , that uses a simple frequency-domain filter instead of self-attention to share information across the whole image.It flows like this -> it takes each slice in its spatial form, cuts it into 16×16 patches, and turns each patch into a short list of 192 numbers (a token), giving a 14×14 grid of tokens. Inside each block, the grid for every feature is converted from the spatial domain to its frequency domain using a 2D FFT transform, where each value now describes how much of a particular wave pattern, from broad shapes to fine detail, the slice contains. These frequency values are multiplied by a learned filter that decides which patterns to keep, shrink or boost, and an inverse Fourier transform converts the result back into the spatial domain. Because every frequency covers the whole slice, each patch now carries information from every other patch after a single layer. A small per-patch network then recombines the features, and this block is repeated six times. Finally, the tokens are averaged into one vector and a linear layer outputs two scores (NC and AD), which a softmax turns into the confidence score.  
@@ -67,15 +68,27 @@ The assertion to check whether there are no shared patients between the validati
 
 
 ### 3 -  Preprocessing and augmentation:
-The data was preprocessed by   
-1. Resizing :  256×240 becomes 224×224 , The model needs one fixed size. It slightly squashes the aspect ratio, which is applied equally to every set.
-2. ToTensor:
-Pixel values 0-255 become 0.0-1.0, shape (1, 224, 224), PyTorch needs tensors. The 1 is the single greyscale channel as mentioned in the data audit.
-3. Normalise :  (mean 0.5, std 0.5)	Values become -1 to 1. A pixel of 0.8 becomes (0.8 - 0.5) / 0.5 = 0.6
+Every slice, in the training, validation and test sets, goes through the same three steps.
+
+First - The slice is resized , 256x240 becomes 224x224 , the model needs one fixed size for its inputs. It slightly squashed the aspect ratio , which is applied equally to every set . 
+
+Pixel values 0-225 become  0.0-1.0 , shape (1 , 224 , 224) , PyTorch needs tensors. The 1 is the single greyscale channel as mentioned in the data audit . 
+ 
+Normalise :  (mean 0.5, std 0.5)	Values become -1 to 1. A pixel of 0.8 becomes (0.8 - 0.5) / 0.5 = 0.6
 Centred inputs make training faster and steadier.
 
-Augmentation:
-The training slices were randomly rotated (±10°), shifted (±5%), zoomed (0.95-1.05) and given small brightness and contrast changes to mimic variation in head position and scanner settings, while validation and test slices were only resized and normalised so their scores stay repeatable.
+Slices that belong only to the training set had the following  augmentations applied to them :
+Random rotation: up to ±15°
+Random shift: up to 10% in each direction
+Random zoom: a scale factor between 0.9 and 1.1
+Brightness and contrast jitter: ±0.1
+
+These mimic natural variation in head position, head size and scanner settings, so the model cannot simply memorise exact pixels. Horizontal flips were deliberately left out, because the left and right sides of the brain cannot be assumed to be interchangeable. The validation and test slices received no augmentation.
+
+<img width="2055" height="791" alt="preprocessing_table" src="https://github.com/user-attachments/assets/d0fe5c57-131c-4b26-a60d-de0210861b8d" />
+
+*Summary table of the preprocessing and augmentation applied to the dataset*
+
 
 
 
