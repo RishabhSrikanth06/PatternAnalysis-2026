@@ -38,6 +38,7 @@ The image ( a slice ) is a greyscale image , containing one channel and the imag
 Here is a example of a AD and NC greyscale image slice :
 
 <img width="256" height="240" alt="218391_78" src="https://github.com/user-attachments/assets/33165666-1b88-4f99-8911-feb5989500b3" />
+
 *IMAGE OF AD BRAIN SLICE*
 
 <img width="256" height="240" alt="808819_88" src="https://github.com/user-attachments/assets/2dc61e74-e774-46a4-835c-c55e18bab589" />
