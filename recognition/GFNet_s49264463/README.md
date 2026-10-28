@@ -55,13 +55,16 @@ I created the validation set from the training set , it was separated from the r
 
 There was no augmentation applied to the validation set.
 
-The data is split by patient not by slice , as slices are too identical If slice 78 is in train and slice 79 is in Tested, the model is “tested” on a brain it has already seen, and the score is inflated. 
-The validation set was created form the training set where Within each class (AD / NC) , The patient IDs are sorted, shuffled with seed 42, and the first 15% are taken:
-AD: 15% of 520 = 78 patients to validation
-NC: 15% of 556 = about 83 patients to validation
-Every slice of a chosen patient goes with them (20 each).
+This was how the validation set was split with the data- leakage prevention step:
 
-The validation set was created 
+<img width="686" height="558" alt="Screenshot 2026-10-28 at 3 26 18 PM" src="https://github.com/user-attachments/assets/adb144a0-24f5-4ddb-8b15-ab638acd336f" />
+
+The assertion to check whether there are no shared patients between the validation and training set :
+
+<img width="632" height="42" alt="Screenshot 2026-10-28 at 3 30 31 PM" src="https://github.com/user-attachments/assets/5f1b77df-f6fd-4c3d-a58d-de453ae4e6f6" />
+
+
+
 
 ### 3 -  Preprocessing and augmentation:
 The data was preprocessed by   
