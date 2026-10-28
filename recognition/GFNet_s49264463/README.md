@@ -3,8 +3,9 @@
 
 The problem is to classify the ADNI data set which contains images of patients brain slices  into AD or NC (Alzheimer's Disease or Normal Cognitive) , this classifier uses a GFnet (Global Filter Network)  with the goal of achieving a test accuracy of >0.8 with a baseline CNN to compare the results with.
 
-## The Workings Of A GFnet As A AD/NC Classifier:
+## The workings of a GFnet as a AD/NC Classifier:
 A global Filter Network works like a vision transformer-style classifier , that uses a simple frequency-domain filter instead of self-attention to share information across the whole image.It flows like this -> it takes each slice in its spatial form, cuts it into 16×16 patches, and turns each patch into a short list of 192 numbers (a token), giving a 14×14 grid of tokens. Inside each block, the grid for every feature is converted from the spatial domain to its frequency domain using a 2D FFT transform, where each value now describes how much of a particular wave pattern, from broad shapes to fine detail, the slice contains. These frequency values are multiplied by a learned filter that decides which patterns to keep, shrink or boost, and an inverse Fourier transform converts the result back into the spatial domain. Because every frequency covers the whole slice, each patch now carries information from every other patch after a single layer. A small per-patch network then recombines the features, and this block is repeated six times. Finally, the tokens are averaged into one vector and a linear layer outputs two scores (NC and AD), which a softmax turns into the confidence score.  
+
 <img width="2055" height="1083" alt="gfnet_architecture" src="https://github.com/user-attachments/assets/2e782f6e-cc3c-4255-8d9b-a2329d56b71f" />
 
 
@@ -87,7 +88,7 @@ These mimic natural variation in head position, head size and scanner settings, 
 
 <img width="2055" height="791" alt="preprocessing_table" src="https://github.com/user-attachments/assets/d0fe5c57-131c-4b26-a60d-de0210861b8d" />
 
-*Summary table of the preprocessing and augmentation applied to the dataset*
+Summary table of the preprocessing and augmentation applied to the dataset*
 
 
 
@@ -100,12 +101,12 @@ These mimic natural variation in head position, head size and scanner settings, 
 ## Models:
 
 
-## 1) BaseLine CNN:
+## 1) Baseline CNN:
 
 <img width="1200" height="642" alt="0*NzssUXXCX9Vs1-YP" src="https://github.com/user-attachments/assets/9cd57032-6c18-4262-af9f-d012c8a2036d" />
 
-* The inspired Architecture behind my Baseline CNN*
-* 
+* The inspired Architecture behind my Baseline CNN *
+  
 ### Introduction : 
 
 The baseline for comparison with the GFnet is a convolutional neural network which I adapted from the MNIST practical in COMP3710 . It takes a 224x224 greyscale slice and passes it through four identical blocks (Added two more blocks for a better test accuracy to compare with the GFnet), each combining a 3×3 stride-2 convolution, batch normalisation, a ReLU and light dropout.The convolutions shrink the slice from 224×224 to 13×13 while the number of feature maps grows to 256, so that later blocks respond to larger structures. Global average pooling then collapses the feature maps into a 256-number summary of the slice, and a linear layer produces two logits, which a softmax turns into the NC and AD probabilities used as the confidence score. 
