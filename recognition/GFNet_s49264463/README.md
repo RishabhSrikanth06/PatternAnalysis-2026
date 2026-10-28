@@ -229,4 +229,61 @@ A large transformer-style model like this can overfit easily when trained from s
 | GFNet | 2,125,634 | 0.713 | 0.653 | 20.3 min | 0.48 GB |
 | GFNet (regularised) | 2,125,634 | 0.722 | 0.680 | 27.2 min | 0.51 GB |
 
+My GFNet has about 2.2 times the parameters of the baseline but does not improve on its test accuracy, and the three results are within the noise expected from 450 test patients. The regularised run (AdamW with weight decay 0.05, dropout 0.1, stochastic depth 0.3, cosine schedule, 40 epochs) closed the gap between training and validation loss but left test accuracy essentially unchanged. The further experiments, full metrics, the confidence analysis and the comparison are in Section 6.
+
+
+
+
+## Section 6 
+
+
+## Results - The Open Research Dilemma
+
+The question that was proposed at the beginning of the report was whether the GFNet's extra complexity is justified over a simple CNN,
+and whether either model's confidence can be trusted in a way that it can decide which cases need a human reviewer. The accuracies are all per slice unless stated otherwise. The target we set out for the  GFNet was 0.80 / 80% test accuracy .
+
+I did not reach the 0.80 test accuracy target for GFNet. Every model I trained, including the baseline CNN, scored about 0.71 to 0.73 on the test set, while validation accuracy was consistently higher, at about 0.82 to 0.86. Rather than stopping there, I ran a series of experiments across several strategies to try to raise test accuracy and to understand why it stayed where it was.
+
+### Experiments :
+| # | Strategy | Experiment | Val acc | Test acc | Test loss |
+|---|---|---|---|---|---|
+| 1 | Capacity | CNN, 2 blocks (75,138 parameters)* | 0.630 | 0.622 | 0.648 |
+| 2 | Capacity | CNN, 4 blocks (961,666 parameters)* | 0.860 | 0.728 | 0.624 |
+| 3 | Baseline | GFNet, light augmentation* | 0.848 | 0.713 | 0.890 |
+| 4 | Data | GFNet, stronger augmentation* | 0.823 | 0.731 | 0.715 |
+| 5 | Data pipeline | Validation leak fixed, CNN retrained | 0.834 | 0.716 | 0.642 |
+| 5 | Data pipeline | Validation leak fixed, GFNet retrained | 0.822 | 0.713 | 0.653 |
+| 6 | Regularisation | GFNet: AdamW, dropout, stochastic depth, cosine schedule, 40 epochs | 0.818 | 0.722 | 0.680 |
+
+### Experiment 1: Increasing CNN depth
+**Motivation.** The first two-block CNN underfitted: training and validation loss were still falling at epoch 15.
+**Change.** I extended it to four blocks, lowered the dropout from 0.3 to 0.1 and trained for 30 epochs.
+**Result.** Test accuracy rose from 0.622 to 0.728.
+**Takeaway.** The baseline needed more capacity. Depth, dropout and epochs changed together, so the gain cannot be attributed to depth alone.
+
+### Experiment 2: GFNet with light augmentation
+**Motivation.** To test whether GFNet's global filter beats the stronger baseline.
+**Result.** GFNet reached 0.713 test accuracy, with 2.2 times the CNN's parameters. Its training loss fell to 0.21 while validation loss stalled near 0.40, so it was memorising the training patients, and its test loss (0.890) was far higher than the CNN's.
+**Takeaway.** GFNet did not beat the baseline, and it was overfitting.
+
+### Experiment 3: Stronger augmentation
+**Change.** Rotation from ±10° to ±15°, shift from 5% to 10%, and zoom from 0.95-1.05 to 0.9-1.1.
+**Result.** The train-to-validation loss gap fell from about 0.20 to about 0.09, test loss fell from 0.890 to 0.715 and test accuracy rose slightly to 0.731.
+**Takeaway.** Augmentation reduced memorisation and made the model less overconfident on test patients, but accuracy barely changed.
+
+### Experiment 4: Fixing leakage in the validation split
+**Motivation.** Validation accuracy (0.82-0.86) was well above test accuracy (about 0.72).
+**Finding.** A nearest-neighbour similarity check showed that 16.8% of validation slices had a near-identical training slice (cosine similarity above 0.99), against 0.4% for test versus training. The matching patients had numerically close IDs, which suggests one person appears under several IDs. An ID-equality check could not detect this.
+**Change.** Patients with IDs within 50 of each other are now kept in the same group, and whole groups are assigned to validation. The near-duplicate rate fell to 0.6%. I then retrained both models.
+**Result.** Test accuracy was 0.716 (CNN) and 0.713 (GFNet), essentially unchanged, and validation accuracy was still about 0.82-0.83.
+**Takeaway.** The leak was real and is fixed, so validation is more trustworthy, but it was not the main cause of the validation-to-test gap.
+
+### Experiment 5: Regularising GFNet
+**Change.** AdamW with weight decay 0.05, dropout 0.1, stochastic depth 0.3 and a cosine learning-rate schedule, trained for 40 epochs, on the fixed split.
+**Result.** The gap between training and validation loss closed (0.376 against 0.404), but test accuracy was 0.722 and test loss 0.680, essentially unchanged.
+**Takeaway.** Overfitting to the training patients is not what limits test accuracy.
+
+### Overall Takeaway
+Across all runs, test accuracy stayed within about two points of 0.72 while the training-validation gap changed substantially, and the CNN and GFNet performed about the same. This suggests the limit comes from how the test patients differ from the training patients and not from model size or training recipe, although I was not able to confirm the cause.
+
 
