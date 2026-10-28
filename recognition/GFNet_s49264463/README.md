@@ -101,7 +101,7 @@ Summary table of the preprocessing and augmentation applied to the dataset*
 ## Models:
 
 
-## 1) Baseline CNN:
+## 1 - Baseline CNN:
 
 
   
@@ -170,4 +170,63 @@ The baseline was trained from scratch on the patient-level training split. After
 | Model | Parameters | Test accuracy (per slice) | Test loss | Training time | Peak VRAM |
 |---|---|---|---|---|---|
 | CNN (4 blocks) | 961,666 | 0.716 | 0.642 | 21.6 min | 0.59 GB 
+
+
+
+## 2 -  Global Filter Network
+
+This section covers the implemented architecture, its design choices and how it was trained.
+GFNet's working principle (patch tokens, 2D FFT, learned frequency-domain filter, inverse FFT) is described in Section 1.
+
+### Architecture :
+
+
+<p align="center"><img src="gfnet_architecture.png" width="90%"></p>
+<p align="center"><em>Figure N: GFNet as implemented. Left: overall network. Right: one block.</em></p>
+
+| Stage | Output shape |
+|---|---|
+| Input slice | 1 × 224 × 224 |
+| Patch embedding (16×16 conv, stride 16) + positional embedding | 196 tokens × 192 |
+| 6 × GFNet block | 196 tokens × 192 |
+| LayerNorm + average over tokens | 192 |
+| Linear | 2 logits (NC, AD) |
+
+Each block computes `x = x + MLP(LayerNorm(GlobalFilter(LayerNorm(x))))`: LayerNorm, global filter (2D FFT, learned complex filter, inverse FFT), LayerNorm, an MLP (192 → 768 → 192) and one residual connection around the whole block.
+
+| Component | Parameters |
+|---|---|
+| Patch embedding | 49,344 |
+| Positional embedding | 37,632 |
+| 6 blocks (each: filter 43,008 + MLP 295,872 + LayerNorms 768) | 2,037,888 |
+| Final LayerNorm + classifier | 770 |
+| **Total** | **2,125,634** |
+
+
+### Design Choices
+
+I chose A small configuration ( 192 - tokens and 6 global filtered blocks) as the training set is only 18,000 slices from 915 patients.
+A large transformer-style model like this can overfit easily when trained from scratch ,The filter is a separate learned 14×8 complex array for each of the 192 features, so features are filtered independently and are mixed across features only by the MLP.  Stochastic depth (drop-path 0.1) was used as light regularisation, and tokens are averaged before the classifier so that every patch contributes. Position information comes from a learned positional embedding.
+
+#### Training
+
+| Setting | Value |
+|---|---|
+| Loss / optimiser | Cross-entropy / Adam, learning rate 3e-4, no weight decay, no schedule |
+| Epochs / batch size | 30 / 32 |
+| Regularisation | Stochastic depth 0.1, augmentation (training set only) |
+| Data and augmentation | As for the baseline (Section 4) |
+| Checkpoint rule | Best validation accuracy |
+| Hardware | Google Colab Pro, NVIDIA T4 |
+| Training time / peak VRAM | 20.3 min / 0.48 GB |
+| Parameters | 2,125,634 |
+
+#### Results
+
+| Model | Parameters | Test accuracy (per slice) | Test loss | Training time | Peak VRAM |
+|---|---|---|---|---|---|
+| CNN (4 blocks) | 961,666 | 0.716 | 0.642 | 21.6 min | 0.59 GB |
+| GFNet | 2,125,634 | 0.713 | 0.653 | 20.3 min | 0.48 GB |
+| GFNet (regularised) | 2,125,634 | 0.722 | 0.680 | 27.2 min | 0.51 GB |
+
 
