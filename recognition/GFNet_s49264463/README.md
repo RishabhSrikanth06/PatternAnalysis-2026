@@ -35,6 +35,7 @@ The main technical risks are patient-level data leakage, overfitting, and overco
 The data originally started with the training set containing 1,076 patients with 21,520 slices totally , and the test set contained 450 patients with 9,002 slices totally, which is around 20 slices per patient with one patient having 22 slices.The provided data split was 85/15 with no leakage from patients in the training set to the test set. 
 
 The image ( a slice ) is a greyscale image , containing one channel and the images are 256×240. 
+
 Here is a example of a AD and NC greyscale image slice :
 
 <img width="256" height="240" alt="218391_78" src="https://github.com/user-attachments/assets/33165666-1b88-4f99-8911-feb5989500b3" />
@@ -47,10 +48,20 @@ Here is a example of a AD and NC greyscale image slice :
 
 
 ### 2 - Data split :
-The data is split by patient not by slice , as slices are too identical If slice 78 is in train and slice 79 is in validation, the model is “tested” on a brain it has already seen, and the score is inflated. The validation set was created form the training set where Within each class (AD / NC) , The patient IDs are sorted, shuffled with seed 42, and the first 15% are taken:
+As mentioned before an audit of the file names showed that no patient ID appears in both sets and that no patient carries both labels, so the supplied split is already separated by patient and the test set can be trusted as an independent measure of performance. The classes are close to balanced (about 48% AD in training and 50% in test).
+
+There is no validation set in the provided dataset , I need more feedback in training to make better choices . I cant figure out parts in the training such as , which epochs weights to keep , when to stop training and how strong the regularisation should be and where to set the confidence threshold that routes uncertain cases to a human reviewer
+I created the validation set from the training set , it was separated from the remaining training data at the same strictness the test set  was .each patient contributes 20 near-identical slices and a slice-level split would let the model be validated on a brain it has already seen. The patient ID is read from each file name (218391_78.jpeg is slice 78 of patient 218391), and all of a patient’s slices are grouped together. The IDs in the data suggest that one person can appear under several numerically close IDs (probably repeat scans), so patients whose IDs are within 50 of each other are merged into one group and are never separated. The groups are shuffled with a fixed seed (42), and whole groups are moved into validation until about 15% of the patients are held out. This gives 915 training patients (18,300 slices) and 161 validation patients (3,220 slices) . 
+
+There was no augmentation applied to the validation set.
+
+The data is split by patient not by slice , as slices are too identical If slice 78 is in train and slice 79 is in Tested, the model is “tested” on a brain it has already seen, and the score is inflated. 
+The validation set was created form the training set where Within each class (AD / NC) , The patient IDs are sorted, shuffled with seed 42, and the first 15% are taken:
 AD: 15% of 520 = 78 patients to validation
 NC: 15% of 556 = about 83 patients to validation
 Every slice of a chosen patient goes with them (20 each).
+
+The validation set was created 
 
 ### 3 -  Preprocessing and augmentation:
 The data was preprocessed by   
