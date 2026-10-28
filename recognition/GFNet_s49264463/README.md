@@ -93,31 +93,49 @@ These mimic natural variation in head position, head size and scanner settings, 
 
 
 
+
+
+
+
 ## Models:
 
-### BASELINE CNN:
-### INTRODUCTION:
-The baseline CNN was adapted from the course MNIST practical ,  the initial two block architecture was too simple and the test accuracy was around 63% , so I upgraded it to a 4 block architecture which ended up achieving a 73% test accuracy which is a better baseline comparison.This shares a similar structure to the GFnets architecture which are repeated blocks followed by a global average pooling  and a final linear MLP layer.The small local filters in the CNN versus a global filter in the GFnet ,This lets me test whether whether GFnets extra complexity is actually justified for classifying AD against NC.
 
-###The 4 block CNN architecture:
+## 1) BaseLine CNN:
 
-An input of 1×224×224 greyscale slice.
-4 conv blocks, each Conv2d (3×3, stride 2) → BatchNorm → ReLU → Dropout (0.1).
-Channels grow 64 → 128 → 256 → 256, and the size shrinks 224 → 111 → 55 → 27 → 13.
-Global average pooling turns the 256 feature maps into 256 numbers.
-A linear layer gives 2 logits (NC, AD). Softmax is applied later to get the confidence score.
-961,666 parameters.
+<img width="1200" height="642" alt="0*NzssUXXCX9Vs1-YP" src="https://github.com/user-attachments/assets/9cd57032-6c18-4262-af9f-d012c8a2036d" />
 
-### How it was trained:
+* The inspired Architecture behind my Baseline CNN*
+* 
+### Introduction : 
 
-The baseline CNN was trained for 30 epochs on  google colab Pro, on a T4 gpu . Cross entropy loss was used and the Adam optimiser (with a learning rate of 1e-3) with a batch size of 32. Validation accuracy was checked after every epoch and the best checkpoint was kept, while the test set was used only once at the end.
+The baseline for comparison with the GFnet is a convolutional neural network which I adapted from the MNIST practical in COMP3710 . It takes a 224x224 greyscale slice and passes it through four identical blocks (Added two more blocks for a better test accuracy to compare with the GFnet), each combining a 3×3 stride-2 convolution, batch normalisation, a ReLU and light dropout.The convolutions shrink the slice from 224×224 to 13×13 while the number of feature maps grows to 256, so that later blocks respond to larger structures. Global average pooling then collapses the feature maps into a 256-number summary of the slice, and a linear layer produces two logits, which a softmax turns into the NC and AD probabilities used as the confidence score. 
 
-### Why this design choice:
+### Why is this a suitable baseline? 
 
-The baseline uses four stride-2 convolution blocks (each with BatchNorm, ReLU and light dropout) to shrink the slice from 224×224 to 13×13, followed by global average pooling and a single linear layer, which keeps the model small (961,666 parameters) and less prone to overfitting. It follows the course MNIST CNN so it stays simple, and it was extended from 2 to 4 blocks after the shallower version underfitted
+I found that the structure of the CNN was the closest to the GFnet overall structure , they take the same 224×224 slice, pass it through a stack of repeated blocks, and end with global average pooling and a linear layer that outputs two logits and a softmax confidence score.The main difference is how information is shared across the slice , the CNN’s small 3×3 filters connect distant regions only after several layers, whereas GFNet’s global filter connects every patch to every other patch in one layer. Comparing them therefore tests whether global mixing, and GFNet’s extra parameters, are worth the cost for AD vs NC classification.
 
-### The results:
-The Final 4-block baseline CNN reached a test accuracy of 73 % with a test loss of 62 %  , with the best validation accuracy is 0.860, at epoch 26. The model trained for 30 epochs which took 22.8 minutes on a Colab T4 GPU with a peak GPU memory use of 0l.59 GB. The relatively high test loss for this accuracy suggests the model’s predictions are not very confident, which is examined in the confidence analysis below.
- 
+### Training Of The Baseline CNN:
 
+
+The baseline was trained from scratch on the patient-level training split. After every epoch it was evaluated on the validation set, and the checkpoint with the best validation accuracy was kept. The test set was not used to choose the checkpoint.
+
+| Setting | Value |
+|---|---|
+| Task | Binary classification, NC (0) vs AD (1), per slice |
+| Input | 1 × 224 × 224 greyscale slice, normalised (mean 0.5, std 0.5) |
+| Training data | 18,300 slices (915 patients) |
+| Validation data | 3,220 slices (161 patients), grouped by nearby patient ID (seed 42) |
+| Augmentation | Training set only: rotation ±15°, shift 10%, zoom 0.9–1.1, brightness/contrast ±0.1 |
+| Loss function | Cross-entropy |
+| Optimiser | Adam, learning rate 1e-3, no weight decay, no learning-rate schedule |
+| Batch size | 32 (572 steps per epoch) |
+| Epochs | 30 |
+| Regularisation | Dropout 0.1, batch normalisation, augmentation |
+| Weight initialisation | PyTorch defaults |
+| Checkpoint rule | Best validation accuracy |
+| Hardware | Google Colab Pro, NVIDIA T4 (15 GB) |
+| Software | Python [x.x], PyTorch [x.x], torchvision [x.x] |
+| Training time | 21.6 minutes |
+| Peak GPU memory | 0.59 GB |
+| Parameters | 961,666 |
 
