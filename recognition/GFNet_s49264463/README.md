@@ -103,9 +103,7 @@ Summary table of the preprocessing and augmentation applied to the dataset*
 
 ## 1) Baseline CNN:
 
-<img width="1200" height="642" alt="0*NzssUXXCX9Vs1-YP" src="https://github.com/user-attachments/assets/9cd57032-6c18-4262-af9f-d012c8a2036d" />
 
-* The inspired Architecture behind my Baseline CNN *
   
 ### Introduction : 
 
@@ -114,6 +112,27 @@ The baseline for comparison with the GFnet is a convolutional neural network whi
 ### Why is this a suitable baseline? 
 
 I found that the structure of the CNN was the closest to the GFnet overall structure , they take the same 224×224 slice, pass it through a stack of repeated blocks, and end with global average pooling and a linear layer that outputs two logits and a softmax confidence score.The main difference is how information is shared across the slice , the CNN’s small 3×3 filters connect distant regions only after several layers, whereas GFNet’s global filter connects every patch to every other patch in one layer. Comparing them therefore tests whether global mixing, and GFNet’s extra parameters, are worth the cost for AD vs NC classification.
+
+### Architecture
+
+A 1 × 224 × 224 greyscale slice passes through four identical blocks, each made of a 3×3 convolution with stride 2, batch normalisation, ReLU and dropout (0.1). Global average pooling then reduces the final 256 feature maps to 256 numbers, and a linear layer outputs two logits (NC, AD). The model has 961,666 parameters.
+
+<p align="center"><img src="cnn_architecture.png" width="90%"></p>
+<p align="center"><em>Figure 3: Architecture of the baseline CNN.</em></p>
+
+| Stage | Output shape |
+|---|---|
+| Input slice | 1 × 224 × 224 |
+| Block 1 | 64 × 111 × 111 |
+| Block 2 | 128 × 55 × 55 |
+| Block 3 | 256 × 27 × 27 |
+| Block 4 | 256 × 13 × 13 |
+| Global average pooling | 256 |
+| Linear | 2 logits |
+
+### Design choices
+
+Stride-2 convolutions shrink the slice without separate pooling layers, so later blocks see a larger part of the brain. Global average pooling followed by one linear layer keeps the model small and less prone to overfitting than flattening the feature maps into a large fully connected layer. The design follows the course MNIST CNN so that the baseline stays simple and recognisable.
 
 ### Training Of The Baseline CNN:
 
@@ -139,4 +158,16 @@ The baseline was trained from scratch on the patient-level training split. After
 | Training time | 21.6 minutes |
 | Peak GPU memory | 0.59 GB |
 | Parameters | 961,666 |
+
+### Training Behaviour:
+
+<img width="1246" height="586" alt="cnn_clean_curves" src="https://github.com/user-attachments/assets/82db6f21-763e-4412-be3f-b5e342d44942" />
+
+
+
+### Baseline results
+
+| Model | Parameters | Test accuracy (per slice) | Test loss | Training time | Peak VRAM |
+|---|---|---|---|---|---|
+| CNN (4 blocks) | 961,666 | 0.716 | 0.642 | 21.6 min | 0.59 GB 
 
