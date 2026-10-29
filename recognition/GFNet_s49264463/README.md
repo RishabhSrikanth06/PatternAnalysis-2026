@@ -330,4 +330,21 @@ Averaging each patient's 20 slice probabilities gives patient-level accuracies o
 Training used a Google Colab Pro NVIDIA T4, and inference times were measured on the same GPU. GFNet has 2.2 times the CNN's parameters but uses less peak memory and trains in a similar time ,the regularised run took longer only because it ran for 40 epochs. Its throughput at batch 32 is slightly better, but a single image takes about three times as long as the CNN's (about 3 ms against 1 ms), probably because its six blocks launch many small GPU operations, although I did not profile this. All models are fast enough for interactive use, so the extra cost is small in absolute terms, but it buys no accuracy on this data.
 
 
+### 6.3 Confidence analysis and reject threshold
 
+<p align="center"><img src="fig_roc_reliability_coverage.png" width="95%"></p>
+<p align="center"><em>Figure N: Left: ROC curves. Centre: reliability diagram (points below the dotted diagonal indicate overconfidence). Right: accuracy of the kept slices as the least confident slices are rejected.</em></p>
+
+ All three models are noticeably overconfident on the test set: their mean confidence (0.81 to 0.85) is higher than their accuracy (0.71 to 0.73), and their expected calibration error (ECE) is about 0.10 to 0.12. The regularised GFNet is the most overconfident (mean confidence 0.853 against accuracy 0.731, ECE 0.122), even though it is the most accurate. Regularisation therefore did not improve calibration here. This answers the first half of the dilemma: neither model's raw confidence can be taken at face value.
+
+The confidence is still informative - >  Accuracy rises steadily as the least confident slices are rejected. For the CNN, the slices kept at a confidence of at least 0.7, 0.8 and 0.9 are 0.768, 0.792 and 0.841 accurate, covering 76%, 61% and 39% of slices. The two GFNet runs behave similarly (0.830 and 0.812 at a threshold of 0.9, covering 37% and 51%). So confidence does rank predictions usefully, but at a cost in coverage.
+
+I chose the threshold on the validation set as the lowest confidence at which the kept slices reach 0.90 accuracy, then applied it unchanged to the test set.
+
+| Model | Threshold (from validation) | Val kept accuracy | Test coverage | Test kept accuracy | Sent to a human |
+|---|---|---|---|---|---|
+| CNN | 0.64 | 0.902 | 83.1% | 0.754 | 16.9% |
+| GFNet | 0.73 | 0.900 | 69.5% | 0.767 | 30.5% |
+| GFNet (regularised) | 0.79 | 0.900 | 69.8% | 0.782 | 30.2% |
+
+The reject rule did not hold up on the test set. I picked each threshold on the validation set so that the slices it kept were 0.90 accurate, but on the test set the same threshold only gave 0.75 to 0.78. I think this is because the validation set is easier than the test set, although I couldn’t confirm that. It shows why the dilemma matters: a threshold that looks safe on validation data can fail on new patients. I also tried fixed thresholds on the test set to see what it would take. Even at a confidence of 0.9, the kept slices were only 0.81 to 0.84 accurate, and I had to reject 49 to 63% of slices to get there. So none of my models reached 0.90 accuracy on the test set at any threshold I tried.
