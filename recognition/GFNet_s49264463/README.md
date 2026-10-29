@@ -1,6 +1,6 @@
 # GFNet for AD vs CN Classification (ADNI)
 
-## Problem Overview
+## Section 1 - Problem Overview
 
 The problem is to classify the ADNI data set which contains images of patients brain slices  into AD or NC (Alzheimer's Disease or Normal Cognitive) , this classifier uses a GFnet (Global Filter Network)  with the goal of achieving a test accuracy of >0.8 with a baseline CNN to compare the results with.
 
@@ -12,7 +12,7 @@ A Global Filter Network works like a vision transformer-style classifier , that 
 
 *Figure 1: GFNet as implemented. Left: the overall network. Right: one block. Own diagram, following Rao et al. (2023).*
 
-## Feasibility Review
+## Section 2 - Feasibility Review
 
 ### 1 - User Need, Scope & Acceptance Criteria
 The intended user for our product will mainly fall in the medical field ,with clinical researchers and diagnostic healthcare providers being the main focus of the intended user.The product is not a replacement for diagnostic health care providers but a tool they can use to help understand the urgency of which cases to review and diagnose .
@@ -31,8 +31,38 @@ Preliminary Feasibility Evidence:An audit of the preprocessed ADNI data found 21
 ### 4 - Risks, Budget & Fallback
 The main technical risks are patient-level data leakage, overfitting, and overconfidence. Slices from the same patient could end up in both training and test sets and inflate accuracy, so I will split by patient ID and check that no patient appears in more than one set. Transformer style models like GFnet can overfit on these smaller medical datasets so I will tackle this through data augmentation on training sets only. The GFnet may also be over confident on ambiguous scans which is the dilemma this project investigates, so I will measure accuracy within confidence bands and compare against the baseline CNN.If GFNet cannot reach 0.80 test accuracy or does not fit the resource limits, the fallback is a smaller configuration (fewer blocks or a smaller embedding dimension) with stronger regularisation. If it still falls short, I will report the result honestly and compare it with the baseline CNN, which is the simpler option.The next step is training the baseline CNN on the patient-level split
 
+## 3. Dependencies and Reproducibility
 
-##  Data - Information And Preprocessing :
+### Environment
+
+| Item | Version / value |
+|---|---|
+| Hardware | Google Colab Pro, NVIDIA Tesla T4 (15,360 MiB), driver 580.82.07 |
+| Python | 3.13.16 |
+| PyTorch | 2.11.0 (CUDA 13.0 build, `2.11.0+cu130`) |
+| torchvision | 0.26.0 (`0.26.0+cu130`) |
+| Pillow | 11.3.0 |
+| matplotlib | 3.10.0 |
+| scikit-learn | 1.6.1 (used only for the evaluation metrics, not for training) |
+
+No other libraries are needed. `modules.py` uses only PyTorch.
+
+### Data
+
+The data is the course's preprocessed ADNI collection (AD and NC folders; NC corresponds to CN in the assignment specification). It is copied to Colab's local disk at `/content/AD_NC`, because reading it directly from Google Drive was far too slow. The data and model weights are not committed to the repository.
+
+### Reproducibility
+
+- **Validation split:** deterministic. Patients are grouped by nearby IDs (gap 50) and shuffled with seed 42, giving the same 915 training and 161 validation patients every time.
+- **Training:** no random seed was set for weight initialisation, data order or augmentation, so repeated runs differ. Repeating one configuration changed test accuracy from 0.722 to 0.731 (Section 6), so differences of about one to two points are noise.
+- **Code versions:** the models were trained with earlier versions of `train.py` (visible in the commit history): the baseline CNN and the first GFNet runs used plain Adam for 30 epochs, and the regularised GFNet used AdamW, dropout 0.1, stochastic depth 0.3 and a cosine schedule for 40 epochs. [Replace this with the exact settings that the final `train.py` reproduces.]
+- **Checkpoints:** the checkpoint with the best validation accuracy was kept for each run. The first regularised run's checkpoint was lost, so Section 6 benchmarks the second run.
+
+### Running the code
+
+See Section 8 for the commands.
+
+## Section 4 -  Data - Information And Preprocessing :
 
 ### 1 - Data Audit: 
 
@@ -71,6 +101,7 @@ The assertion to check whether there are no shared patients between the validati
 
 
 ### 3 -  Preprocessing and augmentation:
+
 Every slice, in the training, validation and test sets, goes through the same three steps.
 
 First - The slice is resized , 256x240 becomes 224x224 , the model needs one fixed size for its inputs. It slightly squashed the aspect ratio , which is applied equally to every set . 
@@ -100,7 +131,7 @@ Summary table of the preprocessing and augmentation applied to the dataset*
 
 
 
-## Models:
+## Section 5 - Models:
 
 
 ## 1 - Baseline CNN:
@@ -236,10 +267,7 @@ My GFNet has about 2.2 times the parameters of the baseline but does not improve
 
 
 
-## Section 6 
-
-
-## Results - The Open Research Dilemma
+## Section 6 - Results - The Open Research Dilemma
 
 The question that was proposed at the beginning of the report was whether the GFNet's extra complexity is justified over a simple CNN,
 and whether either model's confidence can be trusted in a way that it can decide which cases need a human reviewer. The accuracies are all per slice unless stated otherwise. The target we set out for the  GFNet was 0.80 / 80% test accuracy .
@@ -399,7 +427,7 @@ On this Data I would say that the GFnet is not worth advancing on, the extra com
 
 **Limitations of this recommendation.** All results are per slice from a single run of each configuration, so differences of about two points are within noise. The 0.80 target was not met, and I did not establish why validation accuracy (about 0.82) was higher than test accuracy (about 0.72). The most likely explanation is that the test patients differ from the training patients, but I could not confirm this. The validation split was built with a heuristic (grouping nearby patient IDs) checked by a similarity test. Further limitations and ideas for improvement are in the next section.
 
-## 7 -  Limitations and Ideas For Improvement :
+## Section 7 -  Limitations and Ideas For Improvement :
 
 ### 7.1 - Limitations:
 - **Per-slice results.** The models classify one slice at a time and every accuracy in this report is per slice. A clinician needs one answer per patient. Patient-level accuracy (0.73 to 0.77) was computed by averaging each patient's 20 slice probabilities, but it is a different quantity and was not optimised.
@@ -418,4 +446,45 @@ Another thing  is that everything I trained plateaued at about 0.72 on the test 
 
 Finally, the models were overconfident (ECE about 0.10 to 0.12), so calibration methods such as label smoothing or temperature scaling should make a reject threshold more reliable. To judge any of these changes properly, I would run several seeds per configuration, since a repeat of one run moved test accuracy by about a point, and I would finish the strategies I planned but did not run: mixup, per-slice normalisation, weight averaging, a smaller GFNet and attention in place of the FFT filter.
 
+## 8. Example Usage
 
+### Setup
+
+The code was run on Google Colab Pro (NVIDIA T4). The ADNI data is expected at `/content/AD_NC` with `train/` and `test/` folders, each holding `AD/` and `NC/` subfolders of `<patientID>_<slice>.jpeg` files. The data and model weights are not committed to the repository.
+
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `dataset.py` | Groups slices by patient, builds the patient-level train/validation split, applies the transforms and returns the data loaders |
+| `modules.py` | The baseline CNN (`ConvNetwork`) and GFNet (`GFNet` and its blocks) |
+| `train.py` | Trains a model, evaluates it on validation each epoch, keeps the best checkpoint and plots the training curves |
+| `predict.py` | Loads a saved model, predicts AD/NC for test slices with a confidence score and flags low-confidence slices for human review |
+| `utils.py` | Helper that collects softmax probabilities and labels for a data loader |
+
+### Training
+
+[Use the command that matches the `train.py` in your repo. If `grep -c argparse train.py` prints 0, keep the plain command below. If it prints 1 or more, use `python train.py --tag g0` for GFNet and `python train.py --tag c0 --model cnn` for the CNN, and delete the `model_name` sentence.]
+
+
+Set `model_name` at the top of `train.py` to `"gfnet"` or `"cnn"`. Checkpoints and curves are saved to Google Drive (`/content/drive/MyDrive/gfnet_runs`), not to the repository.
+
+### Prediction
+
+| Argument | Meaning |
+|---|---|
+| `--model` | `gfnet` or `cnn` |
+| `--ckpt` | Path to the saved weights |
+| `--data-root` | Dataset folder (default `/content/AD_NC`) |
+| `--n` | Number of test slices to show (default 12) |
+| `--threshold` | Predictions with confidence below this are flagged "SEND TO HUMAN" (0.79 is the threshold chosen on validation for the regularised GFNet in Section 6.3) |
+| `--out` | Output figure |
+
+The script takes evenly spaced slices from the test set, applies the same preprocessing as validation (resize and normalise, no augmentation), and prints one line per slice.
+
+**Example output**
+
+<img width="1920" height="1620" alt="predictions" src="https://github.com/user-attachments/assets/1caf1b19-8643-4722-9d7c-810a8a99f38e" />
+
+In this sample, 3 of 12 predictions are wrong, all of them missed AD cases. Only one is flagged for human review; the other two have confidence 0.83 and 1.00 and would be accepted automatically. This illustrates the finding in Section 6.4 that the errors that matter most for screening are the ones a confidence threshold is least able to catch. With only 12 slices, it illustrates the pattern and does not prove it.
