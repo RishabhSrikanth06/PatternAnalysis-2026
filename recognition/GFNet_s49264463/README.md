@@ -1,10 +1,11 @@
 # GFNet for AD vs CN Classification (ADNI)
+
 ## Problem Overview
 
 The problem is to classify the ADNI data set which contains images of patients brain slices  into AD or NC (Alzheimer's Disease or Normal Cognitive) , this classifier uses a GFnet (Global Filter Network)  with the goal of achieving a test accuracy of >0.8 with a baseline CNN to compare the results with.
 
 ## The workings of a GFnet as a AD/NC Classifier:
-A global Filter Network works like a vision transformer-style classifier , that uses a simple frequency-domain filter instead of self-attention to share information across the whole image.It flows like this -> it takes each slice in its spatial form, cuts it into 16×16 patches, and turns each patch into a short list of 192 numbers (a token), giving a 14×14 grid of tokens. Inside each block, the grid for every feature is converted from the spatial domain to its frequency domain using a 2D FFT transform, where each value now describes how much of a particular wave pattern, from broad shapes to fine detail, the slice contains. These frequency values are multiplied by a learned filter that decides which patterns to keep, shrink or boost, and an inverse Fourier transform converts the result back into the spatial domain. Because every frequency covers the whole slice, each patch now carries information from every other patch after a single layer. A small per-patch network then recombines the features, and this block is repeated six times. Finally, the tokens are averaged into one vector and a linear layer outputs two scores (NC and AD), which a softmax turns into the confidence score.  
+A Global Filter Network works like a vision transformer-style classifier , that uses a simple frequency-domain filter instead of self-attention to share information across the whole image.It flows like this -> it takes each slice in its spatial form, cuts it into 16×16 patches, and turns each patch into a short list of 192 numbers (a token), giving a 14×14 grid of tokens. Inside each block, the grid for every feature is converted from the spatial domain to its frequency domain using a 2D FFT transform, where each value now describes how much of a particular wave pattern, from broad shapes to fine detail, the slice contains. These frequency values are multiplied by a learned filter that decides which patterns to keep, shrink or boost, and an inverse Fourier transform converts the result back into the spatial domain. Because every frequency covers the whole slice, each patch now carries information from every other patch after a single layer. A small per-patch network then recombines the features, and this block is repeated six times. Finally, the tokens are averaged into one vector and a linear layer outputs two scores (NC and AD), which a softmax turns into the confidence score.  
 
 <img width="2055" height="1083" alt="gfnet_architecture" src="https://github.com/user-attachments/assets/2e782f6e-cc3c-4255-8d9b-a2329d56b71f" />
 
@@ -32,6 +33,7 @@ The main technical risks are patient-level data leakage, overfitting, and overco
 
 
 ##  Data - Information And Preprocessing :
+
 ### 1 - Data Audit: 
 
 The data originally started with the training set containing 1,076 patients with 21,520 slices totally , and the test set contained 450 patients with 9,002 slices totally, which is around 20 slices per patient with one patient having 22 slices.The provided data split was 85/15 with no leakage from patients in the training set to the test set. 
@@ -310,10 +312,22 @@ All models were evaluated on the same 9,002 test slices (450 patients). AD is tr
 | GFNet | 3,843 / 697 | 1,889 / 2,573 |
 | GFNet (regularised) | 3,860 / 680 | 1,739 / 2,723 |
 
-The three models are statistically indistinguishable. Their test accuracies differ by under two points, their confidence intervals overlap almost completely, and their AUROCs are all 0.79 to 0.80. GFNet therefore does not outperform the baseline CNN, and none of the models reaches the 0.80 target.
+From the figures you can see that the three Models are statistically indistinguishable . Their test accuracies differ by under two points , their confidence intervals overlap almost completely , and their AUROCS are all 0.79 to 0.80 . This clearly shows that the GFnet does not outperform the baseline CNN , and none of the models come close to reaching the 0.80 test accuracy target.
 
-All three models are biased towards predicting NC. About 84 to 85% of NC slices are classified correctly, but only 58 to 61% of AD slices, so roughly 40% of AD slices are missed (for example 1,841 of 4,462 for the CNN). For a screening tool, a missed AD case is the more serious error, so this is a significant limitation. I did not investigate its cause.
+The three models are also biased towards predicting NC . Around 84 to 85% of NC slices are classified correctly, but for AD it's only 58 to 61% of AD slices , so it's around 48% of the AD slices are missed . This is a serious concern in this case as for a screening tool a missed AD case is more of a serious error. I have included an investigation on this Issue in section 7 .
 
 Averaging each patient's 20 slice probabilities gives patient-level accuracies of 0.731 (CNN), 0.764 (GFNet) and 0.773 (regularised GFNet). This is a different quantity from per-slice accuracy, and with only 450 patients the differences between models are not reliable.
+
+
+### 6.2 Resource profile
+
+| Model | Parameters | Peak VRAM | Training time | Inference, ms/image (batch 32 / batch 1) |
+|---|---|---|---|---|
+| CNN (4 blocks) | 961,666 | 0.59 GB | 21.6 min | 0.61 / 0.96 |
+| GFNet | 2,125,634 | 0.48 GB | 20.3 min | 0.54 / 2.89 |
+| GFNet (regularised) | 2,125,634 | 0.51 GB | 28.7 min (40 epochs) | 0.53 / 3.10 |
+
+Training used a Google Colab Pro NVIDIA T4, and inference times were measured on the same GPU. GFNet has 2.2 times the CNN's parameters but uses less peak memory and trains in a similar time ,the regularised run took longer only because it ran for 40 epochs. Its throughput at batch 32 is slightly better, but a single image takes about three times as long as the CNN's (about 3 ms against 1 ms), probably because its six blocks launch many small GPU operations, although I did not profile this. All models are fast enough for interactive use, so the extra cost is small in absolute terms, but it buys no accuracy on this data.
+
 
 
