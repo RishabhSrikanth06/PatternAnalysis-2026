@@ -381,8 +381,9 @@ The reject rule did not hold up on the test set. I picked each threshold on the 
 
 The most serious error for a screening tool is a missed AD case, and all three models miss about 40% of AD slices (Section 6.1). I examined the missed AD slices of the regularised GFNet in four ways: across patients, across slice position, by confidence, and by looking at individual examples.
 
-<p align="center"><img src="fig_missed_ad.png" width="95%"></p>
-<p align="center"><em>Figure N: Left: share of each AD patient's slices that were missed. Centre: miss rate by slice position. Right: confidence of missed and correctly caught AD slices.</em></p>
+<img width="2800" height="760" alt="fig_missed_ad" src="https://github.com/user-attachments/assets/21b670bc-62e7-47e4-9b3c-5f773579e7ea" />
+
+Figure N: Left: share of each AD patient's slices that were missed. Centre: miss rate by slice position. Right: confidence of missed and correctly caught AD slices.</em></p>
 
 I noticed that the misses are not spread evenly. Of the 223 AD test patients, 21% had no slice missed, 41% had fewer than half missed, and 38% had half or more missed, including 12% (about 27 patients) whose 20 slices were all missed. For these patients the model sees nothing that looks like AD in any slice, so averaging a patient's slices cannot recover them. This probably explains why patient-level accuracy (0.773) is only a few points above slice-level accuracy (0.731).
 
