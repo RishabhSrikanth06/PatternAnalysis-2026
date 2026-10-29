@@ -519,7 +519,6 @@ In this sample, 3 of 12 predictions are wrong, all of them missed AD cases. Only
 - Ran all code myself and checked outputs against expectations: tensor shapes, parameter counts (the GFNet count matched a hand calculation of 2,125,634), a one-epoch smoke test before each full run, and agreement between validation and test results.
 - Added an assertion that no patient is shared between the training and validation sets, and ran a nearest-neighbour similarity check that found the leak an ID check had missed. I fixed the split and retrained both models.
 - Checked every number in the report against the printed logs and saved outputs, and removed or hedged claims I could not support (for example, the cause of the validation-to-test gap).
-- Reviewed code line by line until I could explain it, and tested suggestions that failed or were wrong (for example, a slow copy that read from a Drive shortcut instead of the real files).
 - All the experiments were done by me and The Idea behind the different experiments were mine
 
 **Limits of my verification.** The AI-drafted code and text were not independently reviewed by anyone else. Some AI suggestions contained errors that I found only when running them, so I treated all output as unverified until tested. I take responsibility for every line of code, equation and claim in this submission.
