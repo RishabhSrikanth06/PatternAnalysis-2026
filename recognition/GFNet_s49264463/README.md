@@ -244,6 +244,8 @@ and whether either model's confidence can be trusted in a way that it can decide
 
 I did not reach the 0.80 test accuracy target for GFNet. Every model I trained, including the baseline CNN, scored about 0.71 to 0.73 on the test set, while validation accuracy was consistently higher, at about 0.82 to 0.86. Rather than stopping there, I ran a series of experiments across several strategies to try to raise test accuracy and to understand why it stayed where it was.
 
+
+
 ### Experiments :
 | # | Strategy | Experiment | Val acc | Test acc | Test loss |
 |---|---|---|---|---|---|
@@ -283,7 +285,35 @@ I did not reach the 0.80 test accuracy target for GFNet. Every model I trained, 
 **Result.** The gap between training and validation loss closed (0.376 against 0.404), but test accuracy was 0.722 and test loss 0.680, essentially unchanged.
 **Takeaway.** Overfitting to the training patients is not what limits test accuracy.
 
-### Overall Takeaway
+### Overall Experiment Takeaway
 Across all runs, test accuracy stayed within about two points of 0.72 while the training-validation gap changed substantially, and the CNN and GFNet performed about the same. This suggests the limit comes from how the test patients differ from the training patients and not from model size or training recipe, although I was not able to confirm the cause.
+
+
+### Section 6.1 Benchmark:
+
+
+
+All models were evaluated on the same 9,002 test slices (450 patients). AD is treated as the positive class, and all accuracies are per slice unless stated otherwise. Confidence intervals resample patients, not slices, because the 20 slices of one patient are not independent.
+
+
+| Model | Test acc (95% CI) | Macro-F1 | AUROC | NC precision / recall | AD precision / recall | Patient-level acc |
+|---|---|---|---|---|---|---|
+| CNN (4 blocks) | 0.716 (0.682–0.749) | 0.710 | 0.795 | 0.675 / 0.841 | 0.784 / 0.587 | 0.731 |
+| GFNet | 0.713 (0.682–0.741) | 0.707 | 0.792 | 0.670 / 0.846 | 0.787 / 0.577 | 0.764 |
+| GFNet (regularised) | 0.731 (0.701–0.760) | 0.727 | 0.799 | 0.689 / 0.850 | 0.800 / 0.610 | 0.773 |
+
+**Confusion matrices** (rows: true class; columns: predicted NC, AD)
+
+| Model | True NC | True AD |
+|---|---|---|
+| CNN (4 blocks) | 3,820 / 720 | 1,841 / 2,621 |
+| GFNet | 3,843 / 697 | 1,889 / 2,573 |
+| GFNet (regularised) | 3,860 / 680 | 1,739 / 2,723 |
+
+The three models are statistically indistinguishable. Their test accuracies differ by under two points, their confidence intervals overlap almost completely, and their AUROCs are all 0.79 to 0.80. GFNet therefore does not outperform the baseline CNN, and none of the models reaches the 0.80 target.
+
+All three models are biased towards predicting NC. About 84 to 85% of NC slices are classified correctly, but only 58 to 61% of AD slices, so roughly 40% of AD slices are missed (for example 1,841 of 4,462 for the CNN). For a screening tool, a missed AD case is the more serious error, so this is a significant limitation. I did not investigate its cause.
+
+Averaging each patient's 20 slice probabilities gives patient-level accuracies of 0.731 (CNN), 0.764 (GFNet) and 0.773 (regularised GFNet). This is a different quantity from per-slice accuracy, and with only 450 patients the differences between models are not reliable.
 
 
