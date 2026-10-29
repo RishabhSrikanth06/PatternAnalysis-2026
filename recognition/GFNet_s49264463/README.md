@@ -349,3 +349,73 @@ I chose the threshold on the validation set as the lowest confidence at which th
 | GFNet (regularised) | 0.79 | 0.900 | 69.8% | 0.782 | 30.2% |
 
 The reject rule did not hold up on the test set. I picked each threshold on the validation set so that the slices it kept were 0.90 accurate, but on the test set the same threshold only gave 0.75 to 0.78. I think this is because the validation set is easier than the test set, although I couldn’t confirm that. It shows why the dilemma matters: a threshold that looks safe on validation data can fail on new patients. I also tried fixed thresholds on the test set to see what it would take. Even at a confidence of 0.9, the kept slices were only 0.81 to 0.84 accurate, and I had to reject 49 to 63% of slices to get there. So none of my models reached 0.90 accuracy on the test set at any threshold I tried.
+
+### 6.4 Failure case autopsy
+
+The most serious error for a screening tool is a missed AD case, and all three models miss about 40% of AD slices (Section 6.1). I examined the missed AD slices of the regularised GFNet in four ways: across patients, across slice position, by confidence, and by looking at individual examples.
+
+<p align="center"><img src="fig_missed_ad.png" width="95%"></p>
+<p align="center"><em>Figure N: Left: share of each AD patient's slices that were missed. Centre: miss rate by slice position. Right: confidence of missed and correctly caught AD slices.</em></p>
+
+I noticed that the misses are not spread evenly. Of the 223 AD test patients, 21% had no slice missed, 41% had fewer than half missed, and 38% had half or more missed, including 12% (about 27 patients) whose 20 slices were all missed. For these patients the model sees nothing that looks like AD in any slice, so averaging a patient's slices cannot recover them. This probably explains why patient-level accuracy (0.773) is only a few points above slice-level accuracy (0.731).
+
+The miss rate rises with slice number: 0.27 for slices 75-89, 0.31 for 89-96, 0.46 for 96-103 and 0.58 for 103-114. The model therefore misses AD much more often in the later slices. I did not check what these slice numbers correspond to anatomically, or whether patients differ in where their slices start, so I treat this as an observation and not an explanation.
+
+ Missed AD slices are not low-confidence. Their median confidence is 0.86, almost the same as the 0.87 of correctly caught AD slices, and 61% of them have a confidence above 0.8. The model is confidently wrong on these slices, so a reject threshold cannot catch them. This agrees with Section 6.3, where the reject rule did not reach the target accuracy on the test set.
+
+Figure N+1 shows the four most confidently missed AD slices, each from a different patient, next to a correctly caught AD slice from a different patient at a similar slice number.
+
+<img width="2600" height="1360" alt="fig_missed_ad_examples" src="https://github.com/user-attachments/assets/84a0852f-437f-4872-966f-f708446d8817" />
+
+Figure N+1: Top: confidently missed AD slices from four patients (all 20 of each patient's slices were missed). Bottom: a caught AD slice from a different patient at a similar slice number.</em></p>
+
+| Case | Patient / slice | True / predicted | Confidence | Slices missed | What I observe |
+|---|---|---|---|---|---|
+| 1 | 1223029 / 109 | AD / NC | 1.00 | 20/20 | Clean scan; the ventricle looks moderate in size and the cortical folds look well preserved, with no obvious atrophy compared with the caught AD slices |
+| 2 | 1240482 / 109 | AD / NC | 1.00 | 20/20 | Same: clean scan, moderate ventricle, well-defined folds |
+| 3 | 1398870 / 107 | AD / NC | 1.00 | 20/20 | Same: clean scan, moderate ventricle, well-defined folds |
+| 4 | 985197 / 102 | AD / NC | 1.00 | 20/20 | Atypical image: speckled texture, unusual intensities and part of the brain cut off, which looks like a preprocessing or registration problem |
+
+In three of the four cases the scan looks clean and its anatomy looks pretty ordinary to me. In the caught AD slices the ventricle looks larger and the sulci wider. This suggests these patients may have AD that is not visible as marked atrophy on these slices, so the model has little to go on and answers NC with full confidence. The fourth case is an atypical image with noise and missing brain, which suggests that some scans are affected by preprocessing problems. In all four cases the confidence was 1.00, so no reject threshold would have caught them.
+
+To summarise it ,  The missed AD slices are concentrated in a minority of patients, are more common in later slices, and are made with high confidence. This matters for the dilemma: the errors that matter most for screening are the ones a confidence-based reject rule is least able to catch.
+
+
+### 6.5 Recommendation to the project manager
+
+*Is the GFnet worth Advancing on?*
+On this Data I would say that the GFnet is not worth advancing on, the extra complexity is not justified over the CNN 4 block architecture. It has  about 2.2 times the parameters (2,125,634 versus  961,666) and reaches the same test accuracy (0.713 against 0.716 per slice, with overlapping 95% confidence intervals and AUROCs of 0.79 to 0.80). Its inference time for a single image is about three times longer (about 3 ms versus 1 ms), although its training time and memory use are similar. Strengthening the augmentation, adding regularisation and changing the training recipe did not change this (As Mentioned in Experiments). Neither model reached the 0.80 target
+
+*Can either model's confidence be trusted?** Wouldn't say on its own. Both models are overconfident on unseen patients (mean confidence 0.81 to 0.85 against accuracy 0.71 to 0.73, ECE about 0.10 to 0.12). A reject threshold chosen on validation so that kept slices were 0.90 accurate gave only 0.75 to 0.78 on the test set (Section 6.3). Many of the most serious errors are also made with full confidence: the missed AD slices have a median confidence of 0.86, and the most confident misses reach 1.00, so a confidence threshold cannot catch them (Section 6.4).
+
+**What I would and would not do**
+
+| Use | Recommendation |
+|---|---|
+| Automated diagnosis | No. About 40% of AD slices are missed, and the 0.80 target was not met |
+| Triage aid with human review | Possible only as a supporting tool. The CNN with a threshold of 0.64 would send about 17% of slices to a reviewer, but the remaining slices were only 0.75 accurate on test |
+| Choice of model | Prefer the CNN. It is smaller, simpler and performs the same |
+| Setting the threshold | Re-estimate it on a held-out set of new patients before any real use, because validation overstated test performance |
+
+**Limitations of this recommendation.** All results are per slice from a single run of each configuration, so differences of about two points are within noise. The 0.80 target was not met, and I did not establish why validation accuracy (about 0.82) was higher than test accuracy (about 0.72). The most likely explanation is that the test patients differ from the training patients, but I could not confirm this. The validation split was built with a heuristic (grouping nearby patient IDs) checked by a similarity test. Further limitations and ideas for improvement are in the next section.
+
+## 7 -  Limitations and Ideas For Improvement :
+
+### 7.1 - Limitations:
+- **Per-slice results.** The models classify one slice at a time and every accuracy in this report is per slice. A clinician needs one answer per patient. Patient-level accuracy (0.73 to 0.77) was computed by averaging each patient's 20 slice probabilities, but it is a different quantity and was not optimised.
+- **Target not met.** No model reached the 0.80 test accuracy target. All scored about 0.71 to 0.73.
+- **Unexplained validation-to-test gap.** Validation accuracy (about 0.82) was consistently higher than test accuracy (about 0.72). Fixing the validation leak did not close it. I think the test patients differ from the training patients, but I did not confirm this (for example, by comparing scanners, sites or patient ages).
+- **Test set seen during development.** I looked at test accuracy after most runs. Checkpoints were chosen on validation, but test results informed which experiments I tried next, so the test numbers are less independent than they look.
+- **Missed AD cases.** About 40% of AD slices were missed, many with confidence near 1.00 (Section 6.4). I did not establish why, and my reading of the example slices is an observation, not a clinical judgement.
+- **Training from scratch on a small dataset.** About 18,000 training slices from 915 patients, with no pretrained weights. Architecture and recipe were not tuned beyond the experiments reported.
+
+### 7.2 Ideas For Improvement:
+
+The most urgent problem I noticed is that about 40% of the AD slices were missed, many of these were with a confidence close to 1.00.
+The AUROC is higher (0.79) than the accuracy at the default 0.5 cutoff suggests,I'd say that the model probably rank the slices better than they classify them , so choosing the decision threshold on the validation set to trade some false alarms for more caught AD cases is the cheapest thing to try. For a screening tool, that is also the more sensible direction to move in.
+
+Another thing  is that everything I trained plateaued at about 0.72 on the test set, whether it was a CNN or GFNet and however it was regularised. That makes me think the limit lies in the data, not in the architecture. The first thing I would do with more time is investigate the gap between validation accuracy (about 0.82) and test accuracy (about 0.72), by comparing image statistics and any available metadata to see whether the test patients were acquired differently, because until that is understood, it is hard to trust any other improvement. A related step is to build the validation split from image-similarity clusters rather than nearby patient IDs, so that validation is as hard as the test set. If pretrained weights are allowed, they are the most likely way to get past the plateau, since features learned on much larger datasets often help when only about 18,000 training slices are available.
+
+Finally, the models were overconfident (ECE about 0.10 to 0.12), so calibration methods such as label smoothing or temperature scaling should make a reject threshold more reliable. To judge any of these changes properly, I would run several seeds per configuration, since a repeat of one run moved test accuracy by about a point, and I would finish the strategies I planned but did not run: mixup, per-slice normalisation, weight averaging, a smaller GFNet and attention in place of the FFT filter.
+
+
