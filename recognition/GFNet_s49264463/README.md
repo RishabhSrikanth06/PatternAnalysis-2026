@@ -1,3 +1,4 @@
+
 # GFNet for AD vs CN Classification (ADNI)
 
 ## Section 1 - Problem Overview
@@ -214,7 +215,7 @@ GFNet's working principle (patch tokens, 2D FFT, learned frequency-domain filter
 ### Architecture :
 
 
-<p align="center"><img src="gfnet_architecture.png" width="90%"></p>
+<p align="center"><img src="<img width="2055" height="1083" alt="gfnet_architecture" src="https://github.com/user-attachments/assets/af6c94b6-7ab3-4c48-9656-f49345df9605" />" width="90%"></p>
 <p align="center"><em>Figure N: GFNet as implemented. Left: overall network. Right: one block.</em></p>
 
 | Stage | Output shape |
