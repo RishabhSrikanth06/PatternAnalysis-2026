@@ -151,8 +151,6 @@ I found that the structure of the CNN was the closest to the GFnet overall struc
 
 A 1 × 224 × 224 greyscale slice passes through four identical blocks, each made of a 3×3 convolution with stride 2, batch normalisation, ReLU and dropout (0.1). Global average pooling then reduces the final 256 feature maps to 256 numbers, and a linear layer outputs two logits (NC, AD). The model has 961,666 parameters.
 
-<p align="center"><img src="cnn_architecture.png" width="90%"></p>
-<p align="center"><em>Figure 3: Architecture of the baseline CNN.</em></p>
 
 | Stage | Output shape |
 |---|---|
@@ -215,8 +213,8 @@ GFNet's working principle (patch tokens, 2D FFT, learned frequency-domain filter
 ### Architecture :
 
 
-<p align="center"><img src="<img width="2055" height="1083" alt="gfnet_architecture" src="https://github.com/user-attachments/assets/af6c94b6-7ab3-4c48-9656-f49345df9605" />" width="90%"></p>
-<p align="center"><em>Figure N: GFNet as implemented. Left: overall network. Right: one block.</em></p>
+<img width="2055" height="1083" alt="gfnet_architecture" src="https://github.com/user-attachments/assets/0190e60d-08ae-43b6-9dcd-f39bbbe9a077" />
+* Image of the GFnet Architecture*
 
 | Stage | Output shape |
 |---|---|
