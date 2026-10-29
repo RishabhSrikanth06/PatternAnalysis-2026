@@ -56,7 +56,7 @@ The data is the course's preprocessed ADNI collection (AD and NC folders; NC cor
 
 - **Validation split:** deterministic. Patients are grouped by nearby IDs (gap 50) and shuffled with seed 42, giving the same 915 training and 161 validation patients every time.
 - **Training:** no random seed was set for weight initialisation, data order or augmentation, so repeated runs differ. Repeating one configuration changed test accuracy from 0.722 to 0.731 (Section 6), so differences of about one to two points are noise.
-- **Code versions:** the models were trained with earlier versions of `train.py` (visible in the commit history): the baseline CNN and the first GFNet runs used plain Adam for 30 epochs, and the regularised GFNet used AdamW, dropout 0.1, stochastic depth 0.3 and a cosine schedule for 40 epochs. [Replace this with the exact settings that the final `train.py` reproduces.]
+ **Code versions:** the reported baseline CNN and plain GFNet were trained with an earlier version of `train.py` (plain Adam, 30 epochs; see the commit history). The current `train.py` is the regularised setup (for GFNet: AdamW with weight decay 0.05, dropout 0.1, stochastic depth 0.3, cosine learning-rate schedule, 40 epochs), so rerunning it reproduces the regularised GFNet and not the plain runs. The model is chosen with `model_name` at the top of the file.
 - **Checkpoints:** the checkpoint with the best validation accuracy was kept for each run. The first regularised run's checkpoint was lost, so Section 6 benchmarks the second run.
 
 ### Running the code
@@ -67,7 +67,7 @@ See Section 8 for the commands.
 
 ### 1 - Data Audit: 
 
-The data originally started with the training set containing 1,076 patients with 21,520 slices totally , and the test set contained 450 patients with 9,002 slices totally, which is around 20 slices per patient with one patient having 22 slices.The provided data split was 85/15 with no leakage from patients in the training set to the test set. 
+The data originally started with the training set containing 1,076 patients with 21,520 slices totally , and the test set contained 450 patients with 9,002 slices totally, which is around 20 slices per patient with one patient having 22 slices.The provided data split was 70/30 with no leakage from patients in the training set to the test set. 
 
 The image ( a slice ) is a greyscale image , containing one channel and the images are 256×240. 
 
@@ -186,7 +186,7 @@ The baseline was trained from scratch on the patient-level training split. After
 | Weight initialisation | PyTorch defaults |
 | Checkpoint rule | Best validation accuracy |
 | Hardware | Google Colab Pro, NVIDIA T4 (15 GB) |
-| Software | Python [x.x], PyTorch [x.x], torchvision [x.x] |
+| Software | Python 3.13.16, PyTorch 2.11.0, torchvision 0.26.0 |
 | Training time | 21.6 minutes |
 | Peak GPU memory | 0.59 GB |
 | Parameters | 961,666 |
@@ -341,7 +341,7 @@ All models were evaluated on the same 9,002 test slices (450 patients). AD is tr
 
 From the figures you can see that the three Models are statistically indistinguishable . Their test accuracies differ by under two points , their confidence intervals overlap almost completely , and their AUROCS are all 0.79 to 0.80 . This clearly shows that the GFnet does not outperform the baseline CNN , and none of the models come close to reaching the 0.80 test accuracy target.
 
-The three models are also biased towards predicting NC . Around 84 to 85% of NC slices are classified correctly, but for AD it's only 58 to 61% of AD slices , so it's around 48% of the AD slices are missed . This is a serious concern in this case as for a screening tool a missed AD case is more of a serious error. I have included an investigation on this Issue in section 7 .
+The three models are also biased towards predicting NC . Around 84 to 85% of NC slices are classified correctly, but for AD it's only 58 to 61% of AD slices , so it's around 40% of the AD slices are missed . This is a serious concern in this case as for a screening tool a missed AD case is more of a serious error. I have included an investigation on this Issue in section 6.4 .
 
 Averaging each patient's 20 slice probabilities gives patient-level accuracies of 0.731 (CNN), 0.764 (GFNet) and 0.773 (regularised GFNet). This is a different quantity from per-slice accuracy, and with only 450 patients the differences between models are not reliable.
 
@@ -383,7 +383,8 @@ The most serious error for a screening tool is a missed AD case, and all three m
 
 <img width="2800" height="760" alt="fig_missed_ad" src="https://github.com/user-attachments/assets/21b670bc-62e7-47e4-9b3c-5f773579e7ea" />
 
-Figure N: Left: share of each AD patient's slices that were missed. Centre: miss rate by slice position. Right: confidence of missed and correctly caught AD slices.</em></p>
+*Figure 6: Left: share of each AD patient's slices that were missed. Centre: miss rate by slice position. Right: confidence of missed and correctly caught AD slices.*
+*Figure 7: Top: confidently missed AD slices from four patients (all 20 of each patient's slices were missed). Bottom: a caught AD slice from a different patient at a similar slice number.*
 
 I noticed that the misses are not spread evenly. Of the 223 AD test patients, 21% had no slice missed, 41% had fewer than half missed, and 38% had half or more missed, including 12% (about 27 patients) whose 20 slices were all missed. For these patients the model sees nothing that looks like AD in any slice, so averaging a patient's slices cannot recover them. This probably explains why patient-level accuracy (0.773) is only a few points above slice-level accuracy (0.731).
 
@@ -450,41 +451,86 @@ Finally, the models were overconfident (ECE about 0.10 to 0.12), so calibration 
 
 ### Setup
 
-The code was run on Google Colab Pro (NVIDIA T4). The ADNI data is expected at `/content/AD_NC` with `train/` and `test/` folders, each holding `AD/` and `NC/` subfolders of `<patientID>_<slice>.jpeg` files. The data and model weights are not committed to the repository.
-
-
-### Files
-
-| File | Purpose |
-|---|---|
-| `dataset.py` | Groups slices by patient, builds the patient-level train/validation split, applies the transforms and returns the data loaders |
-| `modules.py` | The baseline CNN (`ConvNetwork`) and GFNet (`GFNet` and its blocks) |
-| `train.py` | Trains a model, evaluates it on validation each epoch, keeps the best checkpoint and plots the training curves |
-| `predict.py` | Loads a saved model, predicts AD/NC for test slices with a confidence score and flags low-confidence slices for human review |
-| `utils.py` | Helper that collects softmax probabilities and labels for a data loader |
+```
+git clone https://github.com/RishabhSrikanth06/PatternAnalysis-2026.git
+cd PatternAnalysis-2026
+git checkout topic-recognition
+cd recognition/GFNet_s49264463
+```
 
 ### Training
 
-[Use the command that matches the `train.py` in your repo. If `grep -c argparse train.py` prints 0, keep the plain command below. If it prints 1 or more, use `python train.py --tag g0` for GFNet and `python train.py --tag c0 --model cnn` for the CNN, and delete the `model_name` sentence.]
-
+```
+python train.py
+```
 
 Set `model_name` at the top of `train.py` to `"gfnet"` or `"cnn"`. Checkpoints and curves are saved to Google Drive (`/content/drive/MyDrive/gfnet_runs`), not to the repository.
 
 ### Prediction
 
-| Argument | Meaning |
-|---|---|
-| `--model` | `gfnet` or `cnn` |
-| `--ckpt` | Path to the saved weights |
-| `--data-root` | Dataset folder (default `/content/AD_NC`) |
-| `--n` | Number of test slices to show (default 12) |
-| `--threshold` | Predictions with confidence below this are flagged "SEND TO HUMAN" (0.79 is the threshold chosen on validation for the regularised GFNet in Section 6.3) |
-| `--out` | Output figure |
+```
+python predict.py --model gfnet --ckpt /content/drive/MyDrive/gfnet_runs/best_gfnet.pt --threshold 0.79 --out predictions.png
+```
 
-The script takes evenly spaced slices from the test set, applies the same preprocessing as validation (resize and normalise, no augmentation), and prints one line per slice.
+**Example output**
+
+```
+1003730_100.jpeg: true AD, predicted NC, confidence 0.76 -> SEND TO HUMAN
+...(the other 11 lines)...
+416324_86.jpeg: true AD, predicted AD, confidence 0.97 -> auto
+9/12 correct on this sample; 3 flagged for human review; figure saved to predictions.png
+```
 
 **Example output**
 
 <img width="1920" height="1620" alt="predictions" src="https://github.com/user-attachments/assets/1caf1b19-8643-4722-9d7c-810a8a99f38e" />
 
+/content/PatternAnalysis-2026/recognition/GFNet_s49264463
+1003730_100.jpeg: true AD, predicted NC, confidence 0.76 -> SEND TO HUMAN
+1162188_86.jpeg: true AD, predicted AD, confidence 0.77 -> SEND TO HUMAN
+1196891_98.jpeg: true NC, predicted NC, confidence 0.97 -> auto
+1231978_108.jpeg: true AD, predicted AD, confidence 0.93 -> auto
+1259263_98.jpeg: true AD, predicted NC, confidence 1.00 -> auto
+1281631_108.jpeg: true NC, predicted NC, confidence 0.95 -> auto
+1320573_96.jpeg: true NC, predicted NC, confidence 0.70 -> SEND TO HUMAN
+1344288_108.jpeg: true NC, predicted NC, confidence 0.99 -> auto
+1387539_96.jpeg: true NC, predicted NC, confidence 0.81 -> auto
+388630_86.jpeg: true AD, predicted NC, confidence 0.83 -> auto
+395983_93.jpeg: true AD, predicted AD, confidence 0.87 -> auto
+416324_86.jpeg: true AD, predicted AD, confidence 0.97 -> auto
+
 In this sample, 3 of 12 predictions are wrong, all of them missed AD cases. Only one is flagged for human review; the other two have confidence 0.83 and 1.00 and would be accepted automatically. This illustrates the finding in Section 6.4 that the errors that matter most for screening are the ones a confidence threshold is least able to catch. With only 12 slices, it illustrates the pattern and does not prove it.
+
+## 9. Artificial Intelligence Usage Disclosure
+
+**Tools used.** I used Claude (Anthropic) throughout this project as an assistant for explanations, drafting and debugging. 
+
+**What AI assisted with**
+
+| Area | How AI was used |
+|---|---|
+| Understanding | Explaining the Fourier transform, GFNet, residual connections, validation sets, patient-level leakage, calibration and the assessment spec |
+| Data pipeline (`dataset.py`) | Drafted the patient grouping, the train/validation split, the transforms, the `Dataset` class and the data loaders. I later wrote the similarity check approach with Claude after noticing the validation gap |
+| Debugging | Colab, Google Drive, Git and shell problems, including slow data loading and corrupted copied files |
+| Report |   edited README sections, tables and figure scripts,|
+
+**How I verified AI-generated work**
+
+- Ran all code myself and checked outputs against expectations: tensor shapes, parameter counts (the GFNet count matched a hand calculation of 2,125,634), a one-epoch smoke test before each full run, and agreement between validation and test results.
+- Added an assertion that no patient is shared between the training and validation sets, and ran a nearest-neighbour similarity check that found the leak an ID check had missed. I fixed the split and retrained both models.
+- Checked every number in the report against the printed logs and saved outputs, and removed or hedged claims I could not support (for example, the cause of the validation-to-test gap).
+- Reviewed code line by line until I could explain it, and tested suggestions that failed or were wrong (for example, a slow copy that read from a Drive shortcut instead of the real files).
+- All the experiments were done by me and The Idea behind the different experiments were mine
+
+**Limits of my verification.** The AI-drafted code and text were not independently reviewed by anyone else. Some AI suggestions contained errors that I found only when running them, so I treated all output as unverified until tested. I take responsibility for every line of code, equation and claim in this submission.
+
+## 10. References
+
+1. Y. Rao, W. Zhao, Z. Zhu, J. Lu and J. Zhou, "Global filter networks for image classification," *IEEE Transactions on Pattern Analysis and Machine Intelligence*, vol. 45, no. 6, pp. 7837–7850, 2023. (Earlier version: NeurIPS 2021, arXiv:2107.00645.)
+2. Y. Rao et al., GFNet official implementation, https://github.com/raoyongming/GFNet. Used as a structural reference for the block layout; the code in this repository is my own implementation.
+3. COMP3710 course practical: MNIST CNN classification notebook, The University of Queensland, 2026. Adapted for the baseline CNN and the training loop.
+4. A. Dosovitskiy et al., "An image is worth 16x16 words: Transformers for image recognition at scale," *ICLR*, 2021. Background for patch tokens and the block layout.
+5. Alzheimer's Disease Neuroimaging Initiative (ADNI), http://adni.loni.usc.edu. Source of the MRI data, supplied preprocessed through COMP3710 (The University of Queensland).
+6. A. Paszke et al., "PyTorch: An imperative style, high-performance deep learning library," *NeurIPS*, 2019.
+7. F. Pedregosa et al., "Scikit-learn: Machine learning in Python," *Journal of Machine Learning Research*, vol. 12, pp. 2825–2830, 2011. Used for evaluation metrics.
+
