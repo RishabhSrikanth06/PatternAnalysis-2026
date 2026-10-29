@@ -332,8 +332,11 @@ Training used a Google Colab Pro NVIDIA T4, and inference times were measured on
 
 ### 6.3 Confidence analysis and reject threshold
 
+<img width="3000" height="880" alt="fig_roc_reliability_coverage" src="https://github.com/user-attachments/assets/65edeeec-6fc3-4399-b3a1-722997f6f864" />
+
 <p align="center"><img src="fig_roc_reliability_coverage.png" width="95%"></p>
 <p align="center"><em>Figure N: Left: ROC curves. Centre: reliability diagram (points below the dotted diagonal indicate overconfidence). Right: accuracy of the kept slices as the least confident slices are rejected.</em></p>
+
 
  All three models are noticeably overconfident on the test set: their mean confidence (0.81 to 0.85) is higher than their accuracy (0.71 to 0.73), and their expected calibration error (ECE) is about 0.10 to 0.12. The regularised GFNet is the most overconfident (mean confidence 0.853 against accuracy 0.731, ECE 0.122), even though it is the most accurate. Regularisation therefore did not improve calibration here. This answers the first half of the dilemma: neither model's raw confidence can be taken at face value.
 
