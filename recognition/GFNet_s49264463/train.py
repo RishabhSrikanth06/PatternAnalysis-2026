@@ -1,4 +1,22 @@
-# Training loop adapted from the COMP3710 MNIST CNN practical.
+
+"""Train and evaluate the GFNet or the baseline CNN on the ADNI slices.
+
+Choose the model with `model_name` below. Each epoch the model is evaluated on
+the patient-level validation set and the checkpoint with the best validation
+accuracy is kept. The test set is used once at the end, with that checkpoint.
+
+Saved to `out_dir` (Google Drive, not the repository):
+    best_<model>.pt          best-validation checkpoint
+    <model>_curves.png       training/validation loss and validation accuracy
+    <model>_test_probs.pt    test softmax probabilities and labels
+
+The training loop is adapted from the COMP3710 MNIST CNN practical.
+
+Note: this file holds the regularised setup (AdamW, cosine learning-rate
+schedule, 40 epochs; for GFNet weight decay 0.05, dropout 0.1, stochastic depth
+0.3). The baseline CNN and plain GFNet results in the report were trained with
+an earlier version (Adam, no schedule, 30 epochs); see the commit history.
+"""
 import os
 import time
 
