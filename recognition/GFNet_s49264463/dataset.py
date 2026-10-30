@@ -1,3 +1,13 @@
+"""Data loading for the preprocessed ADNI brain MRI slices (AD vs NC).
+
+Expected layout under `root`:
+    root/{train,test}/{AD,NC}/<patientID>_<sliceNumber>.jpeg
+
+The provided data has no validation set, so one is carved out of the training
+patients here. Splitting is always by patient (never by slice), because each
+patient contributes about 20 near-identical slices and a slice-level split
+would let the model be validated on brains it has already seen.
+"""
 import os
 import random
 from collections import defaultdict
