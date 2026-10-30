@@ -1,3 +1,26 @@
+"""Predict AD vs NC for a sample of test slices and flag uncertain ones.
+
+Loads a trained checkpoint, takes evenly spaced slices from the test set,
+applies the validation preprocessing (resize and normalise, no augmentation)
+and prints one line per slice: true label, predicted label, confidence
+(the softmax probability of the predicted class) and whether it is accepted
+("auto") or flagged ("SEND TO HUMAN") because its confidence is below
+`--threshold`. It also saves a figure of the slices with their predictions.
+
+Example:
+    python predict.py --model gfnet \
+        --ckpt /content/drive/MyDrive/gfnet_runs/best_gfnet.pt \
+        --threshold 0.79 --out predictions.png
+
+Arguments:
+    --model       "gfnet" or "cnn"
+    --ckpt        path to the saved weights (.pt state dict)
+    --data-root   dataset folder (default /content/AD_NC)
+    --n           number of test slices to show (default 12)
+    --threshold   confidence below this is sent to a human (default 0.79, the
+                  value chosen on the validation set for the regularised GFNet)
+    --out         output figure path (default predictions.png)
+"""
 import argparse
 
 import matplotlib
