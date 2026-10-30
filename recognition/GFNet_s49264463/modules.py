@@ -1,3 +1,16 @@
+"""Models for AD vs NC classification of ADNI brain MRI slices.
+
+Contains two classifiers that take a 1 x 224 x 224 greyscale slice and return
+two raw logits (NC, AD):
+
+* ConvNetwork - the baseline CNN, adapted from the COMP3710 MNIST CNN practical.
+* GFNet - a Global Filter Network (Rao et al., 2023, "Global Filter Networks
+  for Image Classification"). It is my own implementation; the block layout
+  follows the official code (github.com/raoyongming/GFNet).
+
+Softmax is applied outside the models (see utils.collect_probs), so the
+outputs can be used directly with nn.CrossEntropyLoss.
+"""
 import torch.nn as nn
 
 # Adapted from the COMP3710 MNIST CNN practical (BasicBlock / ConvNetwork).
